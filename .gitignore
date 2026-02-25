@@ -1,10 +1,10 @@
-
+temp/
 temp/*.o
 temp/*.ppu
 temp/*.a
 temp/*.compiled
-temp/
-
+temp/delphi_reg_src/Win32
+tool/
 binary/*
 !binary/resources/
 
@@ -49,3 +49,4 @@ templates/standard_game/
 */__recovery/*
 *.local
 *.rsm
+!registeringDelphi.exe

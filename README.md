@@ -1,4 +1,4 @@
-**ray4laz is a header translation of the [raylib game development Library](https://www.raylib.com/) for the [Lazarus project](https://www.lazarus-ide.org/).**
+**ray4laz is a header translation of the [raylib game development Library](https://www.raylib.com/) for the [Lazarus](https://www.lazarus-ide.org/) and Delphi.**
 
 ---
 
@@ -84,6 +84,12 @@ building raylib on multiple platforms
  - [Working for Web (HTML5)](https://github.com/raysan5/raylib/wiki/Working-for-Web-(HTML5))
  - [Working anywhere with CMake](https://github.com/raysan5/raylib/wiki/Working-with-CMake)
  - [CMake Build Options](https://github.com/raysan5/raylib/wiki/CMake-Build-Options)
+
+
+installation in Delphi ide. 
+--------
+You can view the installation for [Delphi in the ray4laz Wiki](https://github.com/GuvaCode/ray4laz/wiki/Delphi-install).
+
 
 
 installation in lazarus ide. 
