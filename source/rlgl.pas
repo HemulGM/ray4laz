@@ -99,7 +99,7 @@ const
   RL_DEFAULT_SHADER_ATTRIB_NAME_COLOR        = 'vertexColor';       // Bound by default to shader location: RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR
   RL_DEFAULT_SHADER_ATTRIB_NAME_TANGENT      = 'vertexTangent';     // Bound by default to shader location: RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT
   RL_DEFAULT_SHADER_ATTRIB_NAME_TEXCOORD2    = 'vertexTexCoord2';   // Bound by default to shader location: RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD2
-  RL_DEFAULT_SHADER_ATTRIB_NAME_BONEIDS      = 'vertexBoneIds';     // Bound by default to shader location: RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEIDS
+  RL_DEFAULT_SHADER_ATTRIB_NAME_BONEINDICES  = 'vertexBoneIndices'; // Bound by default to shader location: RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEINDICES
   RL_DEFAULT_SHADER_ATTRIB_NAME_BONEWEIGHTS  = 'vertexBoneWeights'; // Bound by default to shader location: RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEWEIGHTS
   RL_DEFAULT_SHADER_UNIFORM_NAME_MVP         = 'mvp';               // model-view-projection matrix
   RL_DEFAULT_SHADER_UNIFORM_NAME_VIEW        = 'matView';           // view matrix
@@ -107,7 +107,7 @@ const
   RL_DEFAULT_SHADER_UNIFORM_NAME_MODEL       = 'matModel';          // model matrix
   RL_DEFAULT_SHADER_UNIFORM_NAME_NORMAL      = 'matNormal';         // normal matrix (transpose(inverse(matModelView)))
   RL_DEFAULT_SHADER_UNIFORM_NAME_COLOR       = 'colDiffuse';        // color diffuse (base tint color, multiplied by texture color)
-  RL_DEFAULT_SHADER_UNIFORM_NAME_BONE_MATRICES  = 'boneMatrices';   // bone matrices
+  RL_DEFAULT_SHADER_UNIFORM_NAME_BONEMATRICES = 'boneMatrices';     // bone matrices
   RL_DEFAULT_SHADER_SAMPLER2D_NAME_TEXTURE0  = 'texture0';          // texture0 (texture slot active 0)
   RL_DEFAULT_SHADER_SAMPLER2D_NAME_TEXTURE1  = 'texture1';          // texture1 (texture slot active 1)
   RL_DEFAULT_SHADER_SAMPLER2D_NAME_TEXTURE2  = 'texture2';          // texture2 (texture slot active 2)
@@ -214,9 +214,9 @@ const
   RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT = 4;
   RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD2 = 5;
   RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES = 6;
-  RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEIDS = 7;
+  RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEINDICES = 7;
   RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEWEIGHTS = 8;
-  RL_DEFAULT_SHADER_ATTRIB_LOCATION_INSTANCE_TX = 9;
+  RL_DEFAULT_SHADER_ATTRIB_LOCATION_INSTANCETRANSFORMS = 9;
 
 type
   // Dynamic vertex buffers (position + texcoords + colors + indices arrays)

@@ -248,13 +248,14 @@ const
          tangents      : PSingle;   // Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
          colors        : PByte;     // Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
          indices       : PWord;     // Vertex indices (in case vertex data comes indexed)
-         // Animation vertex data
+         // Skin data for animation
+         boneCount     : Integer;   // Number of bones (MAX: 256 bones)
+         boneIndices   : PByte;     // Vertex bone indices, up to 4 bones influence by vertex (skinning) (shader-location = 6)
+         boneWeights   : PSingle;   // Vertex bone weight, up to 4 bones influence by vertex (skinning) (shader-location = 7)
+         // Runtime animation vertex data (CPU skinning)
+         // NOTE: In case of GPU skinning, not used, pointers are NULL
          animVertices  : PSingle;   // Animated vertex positions (after bones transformations)
          animNormals   : PSingle;   // Animated normals (after bones transformations)
-         boneIds       : PByte;     // Vertex bone ids, up to 4 bones influence by vertex (skinning)
-         boneWeights   : PSingle;   // Vertex bone weight, up to 4 bones influence by vertex (skinning)
-         boneMatrices  : PMatrix;   // Bones animated transformation matrices
-         boneCount     : Integer;          // Number of bones
          // OpenGL identifiers
          vaoId         : LongWord;  // OpenGL Vertex Array Object id
          vboId         : PLongWord; // OpenGL Vertex Buffer Objects id (default vertex data)
@@ -292,11 +293,22 @@ const
          scale       : TVector3;    // Scale
        end;
 
+     (* Anim pose, an array of Transform[] *)
+     TModelAnimPose = PTransform;
+
      (* Bone, skeletal animation bone *)
      PBoneInfo = ^TBoneInfo;
      TBoneInfo = record
          name    : array[0..31] of AnsiChar; // Bone name
          parent  : Integer;              // Bone parent
+       end;
+
+     (* Skeleton, animation bones hierarchy *)
+     PModelSkeleton = ^TModelSkeleton;
+     TModelSkeleton = record
+         boneCount : Integer;          // Number of bones
+         BoneInfo  : PBoneInfo;        // Bones information (skeleton)
+         bindPose  : TModelAnimPose;   // Bones base transformation (Transform[])
        end;
 
      (* Model, meshes, materials and animation data *)
@@ -309,19 +321,19 @@ const
          materials        : PMaterial;  // Materials array
          meshMaterial     : PInteger;   // Mesh material number
          // Animation data
-         boneCount        : Integer;    // Number of bones
-         bones            : PBoneInfo;  // Bones information (skeleton)
-         bindPose         : PTransform; // Bones base transformation (pose)
+         skeleton         : TModelSkeleton ; // Skeleton for animation
+         // Runtime animation data (CPU/GPU skinning)
+         currentPose      : TModelAnimPose ; // Current animation pose (Transform[])
+         boneMatrices     : PMatrix;         // Bones animated transformation matrices
        end;
 
-     (* ModelAnimation *)
+     (* ModelAnimation, contains a full animation sequence *)
      PModelAnimation = ^TModelAnimation;
      TModelAnimation = record
          name : array[0..31] of AnsiChar; // Animation name
-         boneCount : Integer;      // Number of bones
-         frameCount : Integer;     // Number of animation frames
-         bones : PBoneInfo;        // Bones information (skeleton)
-         framePoses : PPTransform; // Poses array by frame
+         boneCount: Integer;              // Number of bones (per pose)
+         keyframeCount: Integer;          // Number of animation key frames
+         keyframePoses: ^TModelAnimPose;  // Animation sequence keyframe poses [keyframe][pose]
        end;
 
       (* Ray, ray for raycasting *)
@@ -702,6 +714,8 @@ const
          MATERIAL_MAP_SPECULAR = MATERIAL_MAP_METALNESS;
 
      (* Shader location index *)
+     // NOTE: Some locations are tried to be set automatically on shader loading,
+     // but only if default attributes/uniforms names are found, check config.h for names
      type
        PShaderLocationIndex = ^TShaderLocationIndex;
        TShaderLocationIndex =  Integer;
@@ -727,15 +741,15 @@ const
          SHADER_LOC_MAP_ROUGHNESS       = TShaderLocationIndex(18); // Shader location: sampler2d texture: roughness
          SHADER_LOC_MAP_OCCLUSION       = TShaderLocationIndex(19); // Shader location: sampler2d texture: occlusion
          SHADER_LOC_MAP_EMISSION        = TShaderLocationIndex(20); // Shader location: sampler2d texture: emission
-         SHADER_LOC_MAP_HEIGHT          = TShaderLocationIndex(21); // Shader location: sampler2d texture: height
+         SHADER_LOC_MAP_HEIGHT          = TShaderLocationIndex(21); // Shader location: sampler2d texture: heightmap
          SHADER_LOC_MAP_CUBEMAP         = TShaderLocationIndex(22); // Shader location: samplerCube texture: cubemap
          SHADER_LOC_MAP_IRRADIANCE      = TShaderLocationIndex(23); // Shader location: samplerCube texture: irradiance
          SHADER_LOC_MAP_PREFILTER       = TShaderLocationIndex(24); // Shader location: samplerCube texture: prefilter
          SHADER_LOC_MAP_BRDF            = TShaderLocationIndex(25); // Shader location: sampler2d texture: brdf
-         SHADER_LOC_VERTEX_BONEIDS      = TShaderLocationIndex(26); // Shader location: vertex attribute: boneIds
-         SHADER_LOC_VERTEX_BONEWEIGHTS  = TShaderLocationIndex(27); // Shader location: vertex attribute: boneWeights
-         SHADER_LOC_BONE_MATRICES       = TShaderLocationIndex(28); // Shader location: array of matrices uniform: boneMatrices
-         SHADER_LOC_VERTEX_INSTANCE_TX  = TShaderLocationIndex(29); // Shader location: vertex attribute: instanceTransform
+         SHADER_LOC_VERTEX_BONEIDS      = TShaderLocationIndex(26); // Shader location: vertex attribute: bone indices
+         SHADER_LOC_VERTEX_BONEWEIGHTS        = TShaderLocationIndex(27); // Shader location: vertex attribute: bone weights
+         SHADER_LOC_MATRIX_BONETRANSFORMS     = TShaderLocationIndex(28); // Shader location: matrix attribute: bone transforms (animation)
+         SHADER_LOC_VERTEX_INSTANCETRANSFORMS = TShaderLocationIndex(29); // Shader location: vertex attribute: instance transforms
 
          SHADER_LOC_MAP_DIFFUSE = SHADER_LOC_MAP_ALBEDO;
          SHADER_LOC_MAP_SPECULAR = SHADER_LOC_MAP_METALNESS;
@@ -2147,17 +2161,11 @@ procedure SetModelMeshMaterial(model: PModel; meshId, materialId: Integer); cdec
 
 {Load model animations from file}
 function LoadModelAnimations(fileName: PAnsiChar; animCount: PInteger): PModelAnimation; cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'LoadModelAnimations';
-{Update model animation pose (CPU)}
-procedure UpdateModelAnimation(model: TModel; anim: TModelAnimation; frame: Integer); cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'UpdateModelAnimation';
-{Update model animation mesh bone matrices (GPU skinning)}
-procedure UpdateModelAnimationBones(model: TModel; anim: TModelAnimation; frame: Integer); cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'UpdateModelAnimationBones';
-{Update model animation mesh bone matrices with interpolation between two poses(GPU skinning)}
-procedure UpdateModelAnimationBonesLerp(model: TModel; animA: TModelAnimation; frameA: integer; animB: TModelAnimation; frameB: Integer; value: Single); cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'UpdateModelAnimationBonesLerp';
-{Update model vertices according to mesh bone matrices (CPU)}
-procedure UpdateModelVertsToCurrentBones(model: TModel); cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'UpdateModelVertsToCurrentBones';
-{Unload animation data}
-procedure UnloadModelAnimation(anim: TModelAnimation); cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'UnloadModelAnimation';
-{Unload animation array data}
+(* Update model animation pose (vertex buffers and bone matrices) *)
+procedure UpdateModelAnimation(model: TModel; anim: TModelAnimation; frame: Single); cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'UpdateModelAnimation';
+(* Update model animation pose, blending two animations *)
+procedure UpdateModelAnimationEx(model: TModel; animA: TModelAnimation; frameA: Single; animB: TModelAnimation; frameB, blend: Single); cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'UpdateModelAnimationEx';
+
 procedure UnloadModelAnimations(animations: PModelAnimation; animCount: Integer); cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'UnloadModelAnimations';
 {Check model animation skeleton match}
 function IsModelAnimationValid(model: TModel; anim: TModelAnimation): Boolean; cdecl; external {$IFNDEF RAY_STATIC}cDllName{$ENDIF} name 'IsModelAnimationValid';
